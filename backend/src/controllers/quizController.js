@@ -90,6 +90,44 @@ async function getRecentAnswers(userId, topicId) {
   return responses.map((r) => r.isCorrect);
 }
 
+/**
+ * Full result of one attempt in the shape QuizResult.jsx reads:
+ * the attempt fields plus a flat list of answers with the question details.
+ */
+async function buildResult(attempt) {
+  const responses = await Response.findAll({
+    where: { quizAttemptId: attempt.id },
+    order: [["id", "ASC"]],
+  });
+
+  const questionIds = responses.map((r) => r.questionId);
+  const questions = questionIds.length
+    ? await Question.findAll({ where: { id: { [Op.in]: questionIds } } })
+    : [];
+  const questionById = Object.fromEntries(questions.map((q) => [q.id, q]));
+
+  return {
+    ...attempt.toJSON(),
+    responses: responses.map((r) => {
+      const q = questionById[r.questionId] || {};
+      return {
+        questionId: r.questionId,
+        selectedAnswer: r.selectedAnswer,
+        isCorrect: r.isCorrect,
+        timeTaken: r.timeTaken,
+        questionText: q.questionText,
+        optionA: q.optionA,
+        optionB: q.optionB,
+        optionC: q.optionC,
+        optionD: q.optionD,
+        correctAnswer: q.correctAnswer,
+        explanation: q.explanation,
+        difficulty: q.difficulty,
+      };
+    }),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // POST /api/quizzes/start      body: { topicId }
 // Creates the attempt and returns the FIRST question only.
@@ -230,6 +268,9 @@ exports.answerQuestion = async (req, res) => {
       updates.status = STATUS_DONE;
       updates.totalQuestions = answeredCount;
       updates.score = Math.round((correctCount / answeredCount) * 100);
+      updates.completedAt = new Date();
+      updates.timeTaken =
+        previous.reduce((sum, r) => sum + (r.timeTaken || 0), 0) + timeTaken;
     }
     await attempt.update(updates);
 
@@ -244,7 +285,7 @@ exports.answerQuestion = async (req, res) => {
       nextQuestion,
       currentQuestionNumber: answeredCount + 1,
       totalQuestions: attempt.totalQuestions,
-      result: finished ? attempt : null,
+      result: finished ? await buildResult(attempt) : null,
     });
   } catch (error) {
     console.error("Error answering question:", error);
@@ -259,9 +300,17 @@ exports.answerQuestion = async (req, res) => {
 // ---------------------------------------------------------------------------
 exports.getQuizHistory = async (req, res) => {
   try {
-    const attempts = await QuizAttempt.findAll({
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(
+      50,
+      Math.max(1, parseInt(req.query.limit, 10) || 10),
+    );
+
+    const { count, rows: attempts } = await QuizAttempt.findAndCountAll({
       where: { userId: req.user.id, status: STATUS_DONE },
-      order: [["createdAt", "DESC"]],
+      order: [["completedAt", "DESC"]],
+      limit,
+      offset: (page - 1) * limit,
     });
 
     const topicIds = [...new Set(attempts.map((a) => a.topicId))];
@@ -275,7 +324,13 @@ exports.getQuizHistory = async (req, res) => {
       topic: topicById[a.topicId] || null,
     }));
 
-    return res.status(200).json({ success: true, quizzes });
+    return res.status(200).json({
+      success: true,
+      attempts: quizzes,
+      total: count,
+      page,
+      totalPages: Math.max(1, Math.ceil(count / limit)),
+    });
   } catch (error) {
     console.error("Error loading quiz history:", error);
     return res
@@ -300,28 +355,9 @@ exports.getQuizById = async (req, res) => {
     }
 
     const topic = await Topic.findByPk(attempt.topicId);
-    const responses = await Response.findAll({
-      where: { quizAttemptId: attempt.id },
-      order: [["id", "ASC"]],
-    });
+    const result = { ...(await buildResult(attempt)), topic };
 
-    const questionIds = responses.map((r) => r.questionId);
-    const questions = questionIds.length
-      ? await Question.findAll({ where: { id: { [Op.in]: questionIds } } })
-      : [];
-    const questionById = Object.fromEntries(questions.map((q) => [q.id, q]));
-
-    const quizAttempt = { ...attempt.toJSON(), topic };
-
-    return res.status(200).json({
-      success: true,
-      quizAttempt,
-      result: quizAttempt,
-      responses: responses.map((r) => ({
-        ...r.toJSON(),
-        question: questionById[r.questionId] || null,
-      })),
-    });
+    return res.status(200).json({ success: true, quizAttempt: result, result });
   } catch (error) {
     console.error("Error loading quiz:", error);
     return res

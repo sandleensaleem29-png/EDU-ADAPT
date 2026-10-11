@@ -4,12 +4,6 @@ import API from "../utils/api";
 import QuizQuestion from "../components/QuizQuestion";
 import Loading from "../components/Loading";
 
-const DIFFICULTY_STYLES = {
-  easy: "bg-green-100 text-green-700",
-  medium: "bg-yellow-100 text-yellow-700",
-  hard: "bg-red-100 text-red-700",
-};
-
 const QuizPage = () => {
   const { topicId } = useParams();
   const navigate = useNavigate();
@@ -138,18 +132,9 @@ const QuizPage = () => {
         >
           ← Exit Quiz
         </button>
-        <div className="flex items-center gap-3">
-          <span
-            className={`px-3 py-1 rounded-full text-xs font-semibold capitalize ${
-              DIFFICULTY_STYLES[difficulty] || "bg-gray-100 text-gray-700"
-            }`}
-          >
-            {difficulty}
-          </span>
-          <span className="text-sm text-gray-500">
-            Time: {formatTime(timeElapsed)}
-          </span>
-        </div>
+        <span className="text-sm text-gray-500">
+          Time: {formatTime(timeElapsed)}
+        </span>
       </div>
 
       {/* Progress bar: one segment per question */}
