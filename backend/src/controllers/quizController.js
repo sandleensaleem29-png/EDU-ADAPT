@@ -1,9 +1,13 @@
 const { Op } = require("sequelize");
-const sequelize = require("../config/database");
-const QuizAttempt = require("../models/QuizAttempt");
-const Question = require("../models/Question");
-const Response = require("../models/Response");
-const Topic = require("../models/Topic");
+// Models come from models/index.js so the associations (user, topic) are set up
+const {
+  sequelize,
+  User,
+  Topic,
+  Question,
+  QuizAttempt,
+  Response,
+} = require("../models");
 
 // ---------------------------------------------------------------------------
 // Settings (these numbers come from the project proposal)
@@ -154,7 +158,13 @@ exports.startQuiz = async (req, res) => {
     }
 
     const totalQuestions = Math.min(QUESTIONS_PER_QUIZ, available);
-    const difficulty = "medium";
+    // Continue from the level the student reached last time in this topic,
+    // so progress is not lost between quizzes. First quiz starts at medium.
+    const lastAttempt = await QuizAttempt.findOne({
+      where: { userId, topicId, status: STATUS_DONE },
+      order: [["completedAt", "DESC"]],
+    });
+    const difficulty = lastAttempt ? lastAttempt.difficulty : "medium";
 
     const attempt = await QuizAttempt.create({
       userId,
@@ -336,6 +346,48 @@ exports.getQuizHistory = async (req, res) => {
     return res
       .status(500)
       .json({ success: false, message: "Server error loading history." });
+  }
+};
+
+// ---------------------------------------------------------------------------
+// GET /api/quizzes/all   (admin)  -> every student's attempts, newest first
+// Optional filters: ?topicId=1&status=completed
+// ---------------------------------------------------------------------------
+exports.getAllQuizzes = async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(
+      50,
+      Math.max(1, parseInt(req.query.limit, 10) || 10),
+    );
+
+    const where = {};
+    if (req.query.topicId) where.topicId = parseInt(req.query.topicId, 10);
+    if (req.query.status) where.status = req.query.status;
+
+    const { count, rows } = await QuizAttempt.findAndCountAll({
+      where,
+      include: [
+        { model: User, as: "user", attributes: ["id", "name", "email"] },
+        { model: Topic, as: "topic", attributes: ["id", "name"] },
+      ],
+      order: [["createdAt", "DESC"]],
+      limit,
+      offset: (page - 1) * limit,
+    });
+
+    return res.status(200).json({
+      success: true,
+      attempts: rows,
+      total: count,
+      page,
+      totalPages: Math.max(1, Math.ceil(count / limit)),
+    });
+  } catch (error) {
+    console.error("Error loading all quizzes:", error);
+    return res
+      .status(500)
+      .json({ success: false, message: "Server error loading quiz attempts." });
   }
 };
 

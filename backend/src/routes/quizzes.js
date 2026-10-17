@@ -1,45 +1,20 @@
 const express = require("express");
 const router = express.Router();
+const quizController = require("../controllers/quizController");
+const { auth, adminOnly } = require("../middleware/auth");
 
-// Fallback handlers to PREVENT ANY UNDEFINED CRASH
-const dummyHandler = (req, res) =>
-  res.status(200).json({ success: true, message: "Endpoint active" });
+// Admin: every student's attempts (Admin → Quiz Attempts page)
+router.get("/all", auth, adminOnly, quizController.getAllQuizzes);
 
-// Load Controller safely
-let quizController = {};
-try {
-  quizController = require("../controllers/quizController");
-} catch (err) {
-  console.error("ERROR LOADING quizController:", err.message);
-}
+// Student: own finished quizzes
+router.get("/history", auth, quizController.getQuizHistory);
 
-// Load Middleware safely
-let auth = (req, res, next) => next();
-let adminOnly = (req, res, next) => next();
+// Adaptive quiz flow: start returns the first question,
+// each answer returns the next question (difficulty decided by the sliding window)
+router.post("/start", auth, quizController.startQuiz);
+router.post("/:id/answer", auth, quizController.answerQuestion);
 
-try {
-  const authModule = require("../middleware/auth");
-  if (typeof authModule === "function") {
-    auth = authModule;
-  } else if (authModule) {
-    if (authModule.auth) auth = authModule.auth;
-    if (authModule.adminOnly) adminOnly = authModule.adminOnly;
-  }
-} catch (err) {
-  console.error("ERROR LOADING auth middleware:", err.message);
-}
-
-// Routes registration with safety checks
-router.get(
-  "/all",
-  auth,
-  adminOnly,
-  quizController.getAllQuizzes || dummyHandler,
-);
-router.get("/history", auth, quizController.getQuizHistory || dummyHandler);
-router.post("/start", auth, quizController.startQuiz || dummyHandler);
-router.post("/:id/answer", auth, quizController.answerQuestion || dummyHandler);
-router.post("/:id/submit", auth, quizController.submitQuiz || dummyHandler);
-router.get("/:id", auth, quizController.getQuizById || dummyHandler);
+// One attempt with all answers (result page)
+router.get("/:id", auth, quizController.getQuizById);
 
 module.exports = router;
