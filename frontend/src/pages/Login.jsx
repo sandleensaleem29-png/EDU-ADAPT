@@ -1,25 +1,25 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
       const user = await login(email, password);
-      navigate(user.role === 'admin' ? '/admin' : '/dashboard');
+      navigate(user.role === "admin" ? "/admin" : "/dashboard");
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed');
+      setError(err.response?.data?.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -77,13 +77,16 @@ const Login = () => {
               disabled={loading}
               className="w-full btn-primary py-3"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? "Signing in..." : "Sign In"}
             </button>
           </form>
 
           <div className="mt-6 text-center text-sm text-gray-500">
-            Don't have an account?{' '}
-            <Link to="/register" className="text-primary-600 hover:text-primary-700 font-medium">
+            Don't have an account?{" "}
+            <Link
+              to="/register"
+              className="text-primary-600 hover:text-primary-700 font-medium"
+            >
               Register
             </Link>
           </div>

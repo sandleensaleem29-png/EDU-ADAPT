@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import API from '../utils/api';
-import Loading from '../components/Loading';
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import API from "../utils/api";
+import Loading from "../components/Loading";
 
 const QuizHistory = () => {
   const [attempts, setAttempts] = useState([]);
@@ -48,35 +48,57 @@ const QuizHistory = () => {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Topic</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Difficulty</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Score</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Questions</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Date</th>
-                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">Action</th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">
+                      Topic
+                    </th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">
+                      Difficulty
+                    </th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">
+                      Score
+                    </th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">
+                      Questions
+                    </th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">
+                      Date
+                    </th>
+                    <th className="text-left py-3 px-4 text-sm font-semibold text-gray-600">
+                      Action
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {attempts.map((attempt) => (
                     <tr key={attempt.id} className="border-b border-gray-100">
                       <td className="py-3 px-4">
-                        <span className="font-medium">{attempt.topic?.name}</span>
+                        <span className="font-medium">
+                          {attempt.topic?.name}
+                        </span>
                       </td>
                       <td className="py-3 px-4">
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          attempt.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
-                          attempt.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-red-100 text-red-700'
-                        }`}>
+                        <span
+                          className={`text-xs px-2 py-1 rounded-full ${
+                            attempt.difficulty === "easy"
+                              ? "bg-green-100 text-green-700"
+                              : attempt.difficulty === "medium"
+                                ? "bg-yellow-100 text-yellow-700"
+                                : "bg-red-100 text-red-700"
+                          }`}
+                        >
                           {attempt.difficulty}
                         </span>
                       </td>
                       <td className="py-3 px-4">
-                        <span className={`font-bold ${
-                          attempt.score >= 80 ? 'text-green-600' :
-                          attempt.score >= 60 ? 'text-yellow-600' :
-                          'text-red-600'
-                        }`}>
+                        <span
+                          className={`font-bold ${
+                            attempt.score >= 80
+                              ? "text-green-600"
+                              : attempt.score >= 60
+                                ? "text-yellow-600"
+                                : "text-red-600"
+                          }`}
+                        >
                           {attempt.score}%
                         </span>
                       </td>
